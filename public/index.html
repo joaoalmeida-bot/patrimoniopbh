@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Patrimonio Empis</title>
+<title>Patrimonio PBH</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
 <style>
 :root{--quadro:#1f3d36;--giz:#f4f1e8;--lapis:#f2c94c;--papel:#fbfaf6;--tinta:#1d2a27;--linha:#d9d5c7;--ok:#2f7d4f;--erro:#b3372b;--r:6px}
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--papel);color:var(--tinta);line-height:1.5}
 header{background:var(--quadro);color:var(--giz);padding:28px 20px 0;border-bottom:6px solid var(--lapis)}
 .wrap{max-width:980px;margin:0 auto}
@@ -39,184 +39,152 @@ th{background:var(--giz);font-weight:700}
 .empty{padding:24px;border:1.5px dashed var(--linha);border-radius:var(--r);color:#5b6663}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:12px 20px;border-radius:var(--r);color:#fff;font-weight:600;display:none;max-width:90vw;z-index:9}
 #toast.ok{background:var(--ok)}#toast.erro{background:var(--erro)}
-#aviso{background:#fbf0cc;border-left:5px solid var(--lapis);padding:12px 16px;margin-bottom:20px;display:none}
+.aviso{background:#fbf0cc;border-left:5px solid var(--lapis);padding:12px 16px;margin-bottom:20px;display:none}
 .busca{max-width:320px;margin:10px 0}
 @media(max-width:600px){form{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:no-preference){#toast{animation:sobe .25s ease-out}@keyframes sobe{from{opacity:0;transform:translate(-50%,10px)}}}
+.login{max-width:420px;margin:40px auto}.login form{grid-template-columns:1fr}
+.user{float:right;font-size:.9rem;margin-top:-4px}.user button{margin-left:10px;background:transparent;border:1px solid var(--giz);color:var(--giz);border-radius:var(--r);padding:4px 10px;cursor:pointer;font:inherit}
+.cred{background:#fbf0cc;border-left:5px solid var(--lapis);padding:12px 16px;margin-top:14px;display:none}.cred code{font-size:1.1rem;font-weight:700}
+.link{color:var(--quadro);font-weight:600;cursor:pointer;background:none;border:0;font:inherit;text-decoration:underline;padding:0}
 </style>
 </head>
 <body>
 <header><div class="wrap">
-  <h1>Patrimonio Empis</h1>
+  <div class="user" id="user" hidden><span id="uname"></span><button id="logout">Sair</button></div>
+  <h1>Patrimonio PBH</h1>
   <p>Controle de retirada e devolução de equipamentos · Suporte técnico</p>
-  <nav role="tablist">
-    <button role="tab" data-tab="emprestimo" aria-selected="true">Novo empréstimo</button>
-    <button role="tab" data-tab="devolucao" aria-selected="false">Devolução</button>
-    <button role="tab" data-tab="equipamentos" aria-selected="false">Registrar equipamento</button>
-    <button role="tab" data-tab="historico" aria-selected="false">Histórico</button>
+  <nav id="nav" hidden>
+    <button data-t="novo" aria-selected="true">Novo empréstimo</button>
+    <button data-t="devolucao" aria-selected="false">Devolução</button>
+    <button data-t="equip" aria-selected="false">Registrar equipamento</button>
+    <button data-t="hist" aria-selected="false">Histórico</button>
   </nav>
 </div></header>
-
 <main class="wrap">
-<div id="aviso"><b>Falta conectar à planilha.</b> Abra o arquivo <code>index.html</code> em um editor de texto e cole a URL do Apps Script na linha <code>const API_URL</code>. Passo a passo no arquivo LEIA-ME.</div>
+<section id="login" class="login on">
+  <h2>Entrar</h2><p class="sub">Acesso restrito ao suporte técnico.</p>
+  <form id="fLogin">
+    <label>Usuário<input name="username" autocomplete="username" placeholder="joao.almeida" required></label>
+    <label>Senha<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">Entrar</button>
+    <span class="hint" id="loginHint"></span>
+  </form>
+  <p class="sub" style="margin-top:20px">Primeiro acesso? <button class="link" id="showReg" type="button">Gerar senha</button></p>
+  <form id="fReg" hidden>
+    <label>E-mail institucional<input name="email" type="email" placeholder="nome@edu.pbh.gov.br" required></label>
+    <button class="btn lapis" type="submit">Gerar senha</button>
+  </form>
+  <div class="cred" id="cred">Usuário: <code id="cUser"></code><br>Senha: <code id="cPass"></code><br><small>Copie agora; ela não será exibida novamente.</small></div>
+</section>
 
-<section id="emprestimo" class="on">
-  <h2>Novo empréstimo</h2>
-  <p class="sub">Preencha os dados de quem está retirando e confirme. O funcionário recebe um e-mail na hora.</p>
-  <form id="fEmp">
-    <label class="full">Nome completo<input name="nome" required autocomplete="off"></label>
-    <label>E-mail (institucional ou pessoal)<input name="email" type="email" required></label>
-    <label>Telefone<input name="telefone" type="tel" required placeholder="(31) 90000-0000"></label>
-    <label>Setor onde trabalha<input name="setor" required></label>
-    <label>Autorizado por (técnico)<input name="tecnico" required></label>
-    <label>Número do equipamento<input name="codigo" list="dlDisp" required autocomplete="off"><span class="hint" id="hintEmp"></span></label>
-    <label>Quantidade<input name="quantidade" type="number" min="1" value="1" required></label>
-    <label class="full">Devolver em (data e horário)<input name="prevista" type="datetime-local" required></label>
+<section id="novo" data-app>
+  <h2>Novo empréstimo</h2><p class="sub">Preencha os dados de quem está retirando e confirme.</p>
+  <form id="fLoan">
+    <label class="full">Nome completo<input name="borrowerName" required></label>
+    <label>E-mail<input name="borrowerEmail" type="email" required></label>
+    <label>Telefone<input name="phone" placeholder="(31) 90000-0000"></label>
+    <label>Setor onde trabalha<input name="department" required></label>
+    <label>Número do equipamento<input name="code" list="codes" required></label>
+    <label>Quantidade<input name="quantity" type="number" min="1" value="1"></label>
+    <label>Devolver em<input name="expectedReturnAt" type="datetime-local"></label>
     <div class="full"><button class="btn lapis" type="submit">Confirmar empréstimo</button></div>
   </form>
-  <datalist id="dlDisp"></datalist>
+  <datalist id="codes"></datalist>
 </section>
 
-<section id="devolucao">
-  <h2>Devolução</h2>
-  <p class="sub">Digite o número do equipamento e marque como devolvido. O chamado é encerrado e o funcionário recebe um e-mail.</p>
-  <form id="fDev">
-    <label class="full">Número do equipamento<input name="codigo" list="dlEmp" required autocomplete="off"><span class="hint" id="hintDev"></span></label>
-    <div class="full"><button class="btn lapis" type="submit">Devolvido</button></div>
+<section id="devolucao" data-app>
+  <h2>Devolução</h2><p class="sub">Empréstimos em aberto.</p>
+  <div class="scroll" id="abertos"></div>
+</section>
+
+<section id="equip" data-app>
+  <h2>Registrar equipamento</h2><p class="sub">Cadastre um novo patrimônio.</p>
+  <form id="fAsset">
+    <label>Número (patrimônio)<input name="code" required></label>
+    <label>Nome<input name="name" required></label>
+    <label class="full">Categoria<input name="category"></label>
+    <div class="full"><button class="btn lapis" type="submit">Cadastrar</button></div>
   </form>
-  <datalist id="dlEmp"></datalist>
-  <h2 style="margin-top:32px">Em aberto agora</h2>
-  <div id="abertos"></div>
+  <h2 style="margin-top:32px">Equipamentos</h2>
+  <div class="scroll" id="listaEquip"></div>
 </section>
 
-<section id="equipamentos">
-  <h2>Registrar equipamento</h2>
-  <p class="sub">Cadastre cada equipamento com um número único (o mesmo da etiqueta de patrimônio).</p>
-  <form id="fEqp">
-    <label>Número / código<input name="codigo" required autocomplete="off"></label>
-    <label>Nome do equipamento<input name="nome" required placeholder="Ex.: Notebook Dell, Projetor Epson"></label>
-    <label class="full">Categoria<input name="categoria" placeholder="Ex.: Notebook, Projetor, Cabo"></label>
-    <div class="full"><button class="btn" type="submit">Registrar equipamento</button></div>
-  </form>
-  <h2 style="margin-top:32px">Equipamentos cadastrados</h2>
-  <div id="listaEqp"></div>
-</section>
-
-<section id="historico">
-  <h2>Histórico de empréstimos</h2>
-  <p class="sub">Tudo também fica salvo na planilha do Google.</p>
-  <input class="busca" id="busca" type="search" placeholder="Buscar por nome, setor ou equipamento" aria-label="Buscar">
-  <div id="tabHist"></div>
+<section id="hist" data-app>
+  <h2>Histórico</h2><p class="sub"><a class="link" href="/api/export.xlsx">Baixar Excel</a></p>
+  <input class="busca" id="busca" placeholder="Buscar por nome, setor ou patrimônio" style="max-width:320px">
+  <div class="scroll" id="historico"></div>
 </section>
 </main>
-<div id="toast" role="status"></div>
-
+<div id="toast"></div>
 <script>
-// ====== COLE AQUI a URL do aplicativo da Web (Apps Script) ======
-const API_URL = "https://script.google.com/macros/s/AKfycbz0YNrBz0YaQ_t20_Yck9yxKcyidNA6tcLCo-1J3ze-9baqGK2WIMpvVTwlbP5bQNw0/exec";
-// ================================================================
-
 const $ = s => document.querySelector(s);
-let eqp = [], emp = [];
-
-function toast(msg, tipo = 'ok') {
-  const t = $('#toast'); t.textContent = msg; t.className = tipo; t.style.display = 'block';
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4500);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = v => v ? new Date(v).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '';
+let data = { assets: [], loans: [] };
+function toast(msg, ok = true) { const t = $('#toast'); t.textContent = msg; t.className = ok ? 'ok' : 'erro'; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 4000); }
+async function api(url, body) {
+  const r = await fetch(url, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({ ok: false, error: 'Resposta inválida do servidor.' }));
+  if (r.status === 401 && !url.includes('/auth/')) { showLogin(); }
+  if (!d.ok) throw new Error(d.error || 'Erro inesperado.');
+  return d;
 }
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const conectado = () => API_URL.startsWith('http');
-
-async function carregar() {
-  if (!conectado()) { $('#aviso').style.display = 'block'; return; }
-  try {
-    const r = await fetch(API_URL); const d = await r.json();
-    eqp = d.equipamentos; emp = d.emprestimos; desenhar();
-  } catch (e) { toast('Não foi possível ler a planilha. Confira a URL e a implantação.', 'erro'); }
+function show(id) {
+  document.querySelectorAll('main > section').forEach(s => s.classList.toggle('on', s.id === id));
+  document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.t === id));
 }
-async function enviar(payload, btn) {
-  if (!conectado()) { toast('Conecte o site à planilha primeiro (veja o aviso no topo).', 'erro'); return null; }
-  btn.disabled = true;
-  try {
-    const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-    const d = await r.json();
-    if (!d.ok) { toast(d.erro, 'erro'); return null; }
-    await carregar(); return d;
-  } catch (e) { toast('Falha de conexão. Tente novamente.', 'erro'); return null; }
-  finally { btn.disabled = false; }
+function showLogin() { $('#nav').hidden = true; $('#user').hidden = true; show('login'); }
+function showApp(user) { $('#uname').textContent = user.fullName; $('#user').hidden = false; $('#nav').hidden = false; show('novo'); load(); }
+async function load() {
+  try { const d = await api('/api/dashboard'); data = d; draw(); } catch (e) { toast(e.message, false); }
 }
-
-function parseBR(s) { // dd/MM/yyyy HH:mm
-  const m = /(\d+)\/(\d+)\/(\d+) (\d+):(\d+)/.exec(s || ''); return m ? new Date(m[3], m[2] - 1, m[1], m[4], m[5]) : null;
+function status(l) {
+  if (l.status === 'Devolvido') return '<span class="tag">Devolvido</span>';
+  const late = l.expectedReturnAt && new Date(l.expectedReturnAt) < new Date();
+  return late ? '<span class="tag atraso">Em atraso</span>' : '<span class="tag aberto">Em aberto</span>';
 }
-function atrasado(e) { const p = parseBR(e.prevista); return e.status === 'Em aberto' && p && p < new Date(); }
-
-function desenhar() {
-  $('#dlDisp').innerHTML = eqp.filter(e => e.status === 'Disponível').map(e => `<option value="${esc(e.codigo)}">${esc(e.nome)}</option>`).join('');
-  const abertos = emp.filter(e => e.status === 'Em aberto');
-  $('#dlEmp').innerHTML = abertos.map(e => `<option value="${esc(e.codigo)}">${esc(e.equipamento)} - ${esc(e.responsavel)}</option>`).join('');
-
-  $('#abertos').innerHTML = abertos.length ? tabela(['Número', 'Equipamento', 'Responsável', 'Setor', 'Retirada', 'Devolver até', ''],
-    abertos.map(e => [esc(e.codigo), esc(e.equipamento), esc(e.responsavel), esc(e.setor), e.retirada,
-      (atrasado(e) ? '<span class="tag atraso">Atrasado</span> ' : '') + esc(e.prevista),
-      `<button class="btn" data-dev="${esc(e.codigo)}">Devolvido</button>`]))
-    : '<div class="empty">Nenhum equipamento emprestado no momento.</div>';
-
-  $('#listaEqp').innerHTML = eqp.length ? tabela(['Número', 'Equipamento', 'Categoria', 'Status'],
-    eqp.map(e => [esc(e.codigo), esc(e.nome), esc(e.categoria), `<span class="tag ${e.status === 'Disponível' ? '' : 'aberto'}">${esc(e.status)}</span>`]))
-    : '<div class="empty">Nenhum equipamento cadastrado. Use o formulário acima para registrar o primeiro.</div>';
-  historico();
+function table(head, rows) { return rows.length ? '<table><thead><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>' : '<div class="empty">Nada por aqui ainda.</div>'; }
+function draw() {
+  $('#codes').innerHTML = data.assets.filter(a => a.status === 'Disponível').map(a => '<option value="' + esc(a.code) + '">' + esc(a.name) + '</option>').join('');
+  const open = data.loans.filter(l => l.status === 'Em aberto');
+  $('#abertos').innerHTML = table(['Responsável', 'Setor', 'Equipamento', 'Retirada', 'Previsão', 'Status', ''], open.map(l =>
+    '<tr><td>' + esc(l.borrowerName) + '</td><td>' + esc(l.department) + '</td><td>' + esc(l.code) + ' · ' + esc(l.assetName) + '</td><td>' + fmt(l.checkedOutAt) + '</td><td>' + fmt(l.expectedReturnAt) + '</td><td>' + status(l) + '</td><td><button class="btn" data-ret="' + esc(l.id) + '">Devolvido</button></td></tr>'));
+  $('#listaEquip').innerHTML = table(['Número', 'Nome', 'Categoria', 'Situação'], data.assets.map(a => '<tr><td>' + esc(a.code) + '</td><td>' + esc(a.name) + '</td><td>' + esc(a.category) + '</td><td>' + esc(a.status) + '</td></tr>'));
+  const q = $('#busca').value.trim().toLowerCase();
+  const rows = data.loans.filter(l => !q || [l.borrowerName, l.department, l.code, l.assetName].join(' ').toLowerCase().includes(q));
+  $('#historico').innerHTML = table(['Responsável', 'Setor', 'Equipamento', 'Retirada', 'Devolução', 'Autorizado por', 'Status'], rows.map(l =>
+    '<tr><td>' + esc(l.borrowerName) + '</td><td>' + esc(l.department) + '</td><td>' + esc(l.code) + ' · ' + esc(l.assetName) + '</td><td>' + fmt(l.checkedOutAt) + '</td><td>' + fmt(l.returnedAt) + '</td><td>' + esc(l.authorizedByName || l.authorizedBy) + '</td><td>' + status(l) + '</td></tr>'));
 }
-function historico() {
-  const q = $('#busca').value.toLowerCase();
-  const l = emp.filter(e => !q || [e.responsavel, e.setor, e.equipamento, e.codigo].join(' ').toLowerCase().includes(q));
-  $('#tabHist').innerHTML = l.length ? tabela(['Responsável', 'Setor', 'Equipamento', 'Nº', 'Qtd', 'Retirada', 'Devolução', 'Autorizado por', 'Status'],
-    l.map(e => [esc(e.responsavel), esc(e.setor), esc(e.equipamento), esc(e.codigo), esc(e.quantidade), e.retirada,
-      e.devolucao || '<span style="color:#5b6663">prevista ' + esc(e.prevista) + '</span>', esc(e.autorizado),
-      atrasado(e) ? '<span class="tag atraso">Atrasado</span>' : `<span class="tag ${e.status === 'Devolvido' ? '' : 'aberto'}">${esc(e.status)}</span>`]))
-    : '<div class="empty">Nenhum empréstimo encontrado.</div>';
-}
-function tabela(cab, linhas) {
-  return '<div class="scroll"><table><thead><tr>' + cab.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>' +
-    linhas.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') + '</tbody></table></div>';
-}
-
-// Abas
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', x === b));
-  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === b.dataset.tab));
-});
-
-// Dicas ao digitar o código
-function dica(input, hint, lista, fmt) {
-  input.addEventListener('input', () => {
-    const e = lista().find(x => x.codigo.toLowerCase() === input.value.trim().toLowerCase());
-    hint.textContent = e ? fmt(e) : '';
-  });
-}
-dica($('#fEmp').codigo, $('#hintEmp'), () => eqp, e => e.status === 'Disponível' ? '✓ ' + e.nome + ' (disponível)' : '✗ ' + e.nome + ' já está emprestado');
-dica($('#fDev').codigo, $('#hintDev'), () => emp.filter(e => e.status === 'Em aberto'), e => e.equipamento + ' com ' + e.responsavel);
-
-// Lembrar técnico
-$('#fEmp').tecnico.value = localStorage.getItem('tecnico') || '';
-
-$('#fEmp').onsubmit = async ev => {
-  ev.preventDefault(); const f = ev.target; const btn = f.querySelector('button');
-  const d = Object.fromEntries(new FormData(f)); d.acao = 'emprestar';
-  localStorage.setItem('tecnico', d.tecnico);
-  if (await enviar(d, btn)) { toast('Empréstimo confirmado. E-mail enviado para ' + d.email + '.'); const t = d.tecnico; f.reset(); f.tecnico.value = t; $('#hintEmp').textContent = ''; }
+const form = el => Object.fromEntries(new FormData(el));
+$('#nav').onclick = e => { if (e.target.dataset.t) show(e.target.dataset.t); };
+$('#busca').oninput = draw;
+$('#showReg').onclick = () => { $('#fReg').hidden = !$('#fReg').hidden; };
+$('#fLogin').onsubmit = async e => {
+  e.preventDefault(); $('#loginHint').textContent = '';
+  try { const d = await api('/api/auth/login', form(e.target)); e.target.reset(); showApp(d.user); }
+  catch (err) { $('#loginHint').textContent = err.message; }
 };
-async function devolver(codigo, btn) {
-  const r = await enviar({ acao: 'devolver', codigo }, btn);
-  if (r) { toast('Devolvido: ' + r.equipamento + ' (' + r.responsavel + '). Chamado encerrado e e-mail enviado.'); $('#fDev').reset(); $('#hintDev').textContent = ''; }
-}
-$('#fDev').onsubmit = ev => { ev.preventDefault(); devolver(ev.target.codigo.value.trim(), ev.target.querySelector('button')); };
-$('#abertos').onclick = ev => { const c = ev.target.dataset.dev; if (c) devolver(c, ev.target); };
-$('#fEqp').onsubmit = async ev => {
-  ev.preventDefault(); const f = ev.target; const d = Object.fromEntries(new FormData(f)); d.acao = 'registrar';
-  if (await enviar(d, f.querySelector('button'))) { toast('Equipamento ' + d.codigo + ' registrado.'); f.reset(); }
+$('#fReg').onsubmit = async e => {
+  e.preventDefault();
+  try { const d = await api('/api/auth/register', form(e.target)); $('#cUser').textContent = d.username; $('#cPass').textContent = d.password; $('#cred').style.display = 'block'; e.target.reset(); }
+  catch (err) { toast(err.message, false); }
 };
-$('#busca').oninput = historico;
-carregar();
+$('#logout').onclick = async () => { await api('/api/auth/logout', {}).catch(() => {}); showLogin(); };
+$('#fLoan').onsubmit = async e => {
+  e.preventDefault(); const b = form(e.target);
+  if (b.expectedReturnAt) b.expectedReturnAt = new Date(b.expectedReturnAt).toISOString();
+  try { await api('/api/loans', b); e.target.reset(); e.target.quantity.value = 1; toast('Empréstimo registrado.'); load(); } catch (err) { toast(err.message, false); }
+};
+$('#fAsset').onsubmit = async e => {
+  e.preventDefault();
+  try { await api('/api/assets', form(e.target)); e.target.reset(); toast('Equipamento cadastrado.'); load(); } catch (err) { toast(err.message, false); }
+};
+$('#abertos').onclick = async e => {
+  const id = e.target.dataset.ret; if (!id) return;
+  try { await api('/api/loans/' + id + '/return', {}); toast('Devolução registrada.'); load(); } catch (err) { toast(err.message, false); }
+};
+fetch('/api/session').then(r => r.json()).then(d => d.user ? showApp(d.user) : showLogin()).catch(showLogin);
 </script>
 </body>
 </html>
