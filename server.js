@@ -73,7 +73,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!approved[username] || !password) return res.status(401).json({ ok: false, error: 'Usuário ou senha inválidos.' });
     const user = await lookupUser(username);
     if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ ok: false, error: 'Usuário ou senha inválidos. Se for o primeiro acesso, gere uma senha.' });
-    req.session.user = user;
+    req.session.user = { username: user.username, full_name: user.full_name || user.fullName, email: user.email };
     res.json({ ok: true, user: userView(user) });
   } catch (err) { console.error(err); res.status(500).json({ ok: false, error: 'Falha ao entrar no sistema.' }); }
 });
