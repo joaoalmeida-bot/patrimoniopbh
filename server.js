@@ -7,6 +7,7 @@ const XLSX = require('xlsx');
 const crypto = require('crypto');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === 'production';
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }) : null;
