@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matrimonio Empis</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--quadro:#1f3d36;--giz:#f4f1e8;--lapis:#f2c94c;--papel:#fbfaf6;--tinta:#1d2a27;--linha:#d9d5c7;--ok:#2f7d4f;--erro:#b3372b;--r:6px}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--papel);color:var(--tinta);line-height:1.5}
+header{background:var(--quadro);color:var(--giz);padding:28px 20px 0;border-bottom:6px solid var(--lapis)}
+.wrap{max-width:980px;margin:0 auto}
+h1{margin:0;font-size:clamp(2rem,6vw,3.4rem);font-weight:800;letter-spacing:-.02em;line-height:1}
+header p{margin:6px 0 20px;opacity:.8}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{font:inherit;font-weight:600;background:transparent;color:var(--giz);border:0;padding:10px 16px;border-radius:var(--r) var(--r) 0 0;cursor:pointer;opacity:.75}
+nav button[aria-selected=true]{background:var(--papel);color:var(--quadro);opacity:1}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--lapis);outline-offset:2px}
+main{padding:28px 20px 60px}
+section{display:none}section.on{display:block}
+h2{margin:0 0 4px;font-size:1.5rem}
+.sub{margin:0 0 20px;color:#5b6663}
+form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 18px;max-width:720px}
+.full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.92rem}
+input,select{font:inherit;padding:10px 12px;border:1.5px solid var(--linha);border-radius:var(--r);background:#fff;color:var(--tinta)}
+input:focus,select:focus{border-color:var(--quadro)}
+.btn{font:inherit;font-weight:700;padding:12px 20px;border:0;border-radius:var(--r);background:var(--quadro);color:var(--giz);cursor:pointer}
+.btn.lapis{background:var(--lapis);color:var(--tinta)}
+.btn:disabled{opacity:.5;cursor:wait}
+.hint{font-size:.85rem;font-weight:400;color:#5b6663;min-height:1.2em}
+table{width:100%;border-collapse:collapse;font-size:.92rem;margin-top:12px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--linha);vertical-align:top}
+th{background:var(--giz);font-weight:700}
+.scroll{overflow-x:auto}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.8rem;font-weight:600;background:#e6efe9;color:var(--ok)}
+.tag.aberto{background:#fbf0cc;color:#7a5b00}.tag.atraso{background:#f6dcd8;color:var(--erro)}
+.empty{padding:24px;border:1.5px dashed var(--linha);border-radius:var(--r);color:#5b6663}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:12px 20px;border-radius:var(--r);color:#fff;font-weight:600;display:none;max-width:90vw;z-index:9}
+#toast.ok{background:var(--ok)}#toast.erro{background:var(--erro)}
+#aviso{background:#fbf0cc;border-left:5px solid var(--lapis);padding:12px 16px;margin-bottom:20px;display:none}
+.busca{max-width:320px;margin:10px 0}
+@media(max-width:600px){form{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:no-preference){#toast{animation:sobe .25s ease-out}@keyframes sobe{from{opacity:0;transform:translate(-50%,10px)}}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Matrimonio Empis</h1>
+  <p>Controle de retirada e devolução de equipamentos · Suporte técnico</p>
+  <nav role="tablist">
+    <button role="tab" data-tab="emprestimo" aria-selected="true">Novo empréstimo</button>
+    <button role="tab" data-tab="devolucao" aria-selected="false">Devolução</button>
+    <button role="tab" data-tab="equipamentos" aria-selected="false">Registrar equipamento</button>
+    <button role="tab" data-tab="historico" aria-selected="false">Histórico</button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+<div id="aviso"><b>Falta conectar à planilha.</b> Abra o arquivo <code>index.html</code> em um editor de texto e cole a URL do Apps Script na linha <code>const API_URL</code>. Passo a passo no arquivo LEIA-ME.</div>
+
+<section id="emprestimo" class="on">
+  <h2>Novo empréstimo</h2>
+  <p class="sub">Preencha os dados de quem está retirando e confirme. O funcionário recebe um e-mail na hora.</p>
+  <form id="fEmp">
+    <label class="full">Nome completo<input name="nome" required autocomplete="off"></label>
+    <label>E-mail (institucional ou pessoal)<input name="email" type="email" required></label>
+    <label>Telefone<input name="telefone" type="tel" required placeholder="(31) 90000-0000"></label>
+    <label>Setor onde trabalha<input name="setor" required></label>
+    <label>Autorizado por (técnico)<input name="tecnico" required></label>
+    <label>Número do equipamento<input name="codigo" list="dlDisp" required autocomplete="off"><span class="hint" id="hintEmp"></span></label>
+    <label>Quantidade<input name="quantidade" type="number" min="1" value="1" required></label>
+    <label class="full">Devolver em (data e horário)<input name="prevista" type="datetime-local" required></label>
+    <div class="full"><button class="btn lapis" type="submit">Confirmar empréstimo</button></div>
+  </form>
+  <datalist id="dlDisp"></datalist>
+</section>
+
+<section id="devolucao">
+  <h2>Devolução</h2>
+  <p class="sub">Digite o número do equipamento e marque como devolvido. O chamado é encerrado e o funcionário recebe um e-mail.</p>
+  <form id="fDev">
+    <label class="full">Número do equipamento<input name="codigo" list="dlEmp" required autocomplete="off"><span class="hint" id="hintDev"></span></label>
+    <div class="full"><button class="btn lapis" type="submit">Devolvido</button></div>
+  </form>
+  <datalist id="dlEmp"></datalist>
+  <h2 style="margin-top:32px">Em aberto agora</h2>
+  <div id="abertos"></div>
+</section>
+
+<section id="equipamentos">
+  <h2>Registrar equipamento</h2>
+  <p class="sub">Cadastre cada equipamento com um número único (o mesmo da etiqueta de patrimônio).</p>
+  <form id="fEqp">
+    <label>Número / código<input name="codigo" required autocomplete="off"></label>
+    <label>Nome do equipamento<input name="nome" required placeholder="Ex.: Notebook Dell, Projetor Epson"></label>
+    <label class="full">Categoria<input name="categoria" placeholder="Ex.: Notebook, Projetor, Cabo"></label>
+    <div class="full"><button class="btn" type="submit">Registrar equipamento</button></div>
+  </form>
+  <h2 style="margin-top:32px">Equipamentos cadastrados</h2>
+  <div id="listaEqp"></div>
+</section>
+
+<section id="historico">
+  <h2>Histórico de empréstimos</h2>
+  <p class="sub">Tudo também fica salvo na planilha do Google.</p>
+  <input class="busca" id="busca" type="search" placeholder="Buscar por nome, setor ou equipamento" aria-label="Buscar">
+  <div id="tabHist"></div>
+</section>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+// ====== COLE AQUI a URL do aplicativo da Web (Apps Script) ======
+const API_URL = "COLE_AQUI_A_URL_DO_APPS_SCRIPT";
+// ================================================================
+
+const $ = s => document.querySelector(s);
+let eqp = [], emp = [];
+
+function toast(msg, tipo = 'ok') {
+  const t = $('#toast'); t.textContent = msg; t.className = tipo; t.style.display = 'block';
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4500);
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const conectado = () => API_URL.startsWith('http');
+
+async function carregar() {
+  if (!conectado()) { $('#aviso').style.display = 'block'; return; }
+  try {
+    const r = await fetch(API_URL); const d = await r.json();
+    eqp = d.equipamentos; emp = d.emprestimos; desenhar();
+  } catch (e) { toast('Não foi possível ler a planilha. Confira a URL e a implantação.', 'erro'); }
+}
+async function enviar(payload, btn) {
+  if (!conectado()) { toast('Conecte o site à planilha primeiro (veja o aviso no topo).', 'erro'); return null; }
+  btn.disabled = true;
+  try {
+    const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (!d.ok) { toast(d.erro, 'erro'); return null; }
+    await carregar(); return d;
+  } catch (e) { toast('Falha de conexão. Tente novamente.', 'erro'); return null; }
+  finally { btn.disabled = false; }
+}
+
+function parseBR(s) { // dd/MM/yyyy HH:mm
+  const m = /(\d+)\/(\d+)\/(\d+) (\d+):(\d+)/.exec(s || ''); return m ? new Date(m[3], m[2] - 1, m[1], m[4], m[5]) : null;
+}
+function atrasado(e) { const p = parseBR(e.prevista); return e.status === 'Em aberto' && p && p < new Date(); }
+
+function desenhar() {
+  $('#dlDisp').innerHTML = eqp.filter(e => e.status === 'Disponível').map(e => `<option value="${esc(e.codigo)}">${esc(e.nome)}</option>`).join('');
+  const abertos = emp.filter(e => e.status === 'Em aberto');
+  $('#dlEmp').innerHTML = abertos.map(e => `<option value="${esc(e.codigo)}">${esc(e.equipamento)} - ${esc(e.responsavel)}</option>`).join('');
+
+  $('#abertos').innerHTML = abertos.length ? tabela(['Número', 'Equipamento', 'Responsável', 'Setor', 'Retirada', 'Devolver até', ''],
+    abertos.map(e => [esc(e.codigo), esc(e.equipamento), esc(e.responsavel), esc(e.setor), e.retirada,
+      (atrasado(e) ? '<span class="tag atraso">Atrasado</span> ' : '') + esc(e.prevista),
+      `<button class="btn" data-dev="${esc(e.codigo)}">Devolvido</button>`]))
+    : '<div class="empty">Nenhum equipamento emprestado no momento.</div>';
+
+  $('#listaEqp').innerHTML = eqp.length ? tabela(['Número', 'Equipamento', 'Categoria', 'Status'],
+    eqp.map(e => [esc(e.codigo), esc(e.nome), esc(e.categoria), `<span class="tag ${e.status === 'Disponível' ? '' : 'aberto'}">${esc(e.status)}</span>`]))
+    : '<div class="empty">Nenhum equipamento cadastrado. Use o formulário acima para registrar o primeiro.</div>';
+  historico();
+}
+function historico() {
+  const q = $('#busca').value.toLowerCase();
+  const l = emp.filter(e => !q || [e.responsavel, e.setor, e.equipamento, e.codigo].join(' ').toLowerCase().includes(q));
+  $('#tabHist').innerHTML = l.length ? tabela(['Responsável', 'Setor', 'Equipamento', 'Nº', 'Qtd', 'Retirada', 'Devolução', 'Autorizado por', 'Status'],
+    l.map(e => [esc(e.responsavel), esc(e.setor), esc(e.equipamento), esc(e.codigo), esc(e.quantidade), e.retirada,
+      e.devolucao || '<span style="color:#5b6663">prevista ' + esc(e.prevista) + '</span>', esc(e.autorizado),
+      atrasado(e) ? '<span class="tag atraso">Atrasado</span>' : `<span class="tag ${e.status === 'Devolvido' ? '' : 'aberto'}">${esc(e.status)}</span>`]))
+    : '<div class="empty">Nenhum empréstimo encontrado.</div>';
+}
+function tabela(cab, linhas) {
+  return '<div class="scroll"><table><thead><tr>' + cab.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>' +
+    linhas.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') + '</tbody></table></div>';
+}
+
+// Abas
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === b.dataset.tab));
+});
+
+// Dicas ao digitar o código
+function dica(input, hint, lista, fmt) {
+  input.addEventListener('input', () => {
+    const e = lista().find(x => x.codigo.toLowerCase() === input.value.trim().toLowerCase());
+    hint.textContent = e ? fmt(e) : '';
+  });
+}
+dica($('#fEmp').codigo, $('#hintEmp'), () => eqp, e => e.status === 'Disponível' ? '✓ ' + e.nome + ' (disponível)' : '✗ ' + e.nome + ' já está emprestado');
+dica($('#fDev').codigo, $('#hintDev'), () => emp.filter(e => e.status === 'Em aberto'), e => e.equipamento + ' com ' + e.responsavel);
+
+// Lembrar técnico
+$('#fEmp').tecnico.value = localStorage.getItem('tecnico') || '';
+
+$('#fEmp').onsubmit = async ev => {
+  ev.preventDefault(); const f = ev.target; const btn = f.querySelector('button');
+  const d = Object.fromEntries(new FormData(f)); d.acao = 'emprestar';
+  localStorage.setItem('tecnico', d.tecnico);
+  if (await enviar(d, btn)) { toast('Empréstimo confirmado. E-mail enviado para ' + d.email + '.'); const t = d.tecnico; f.reset(); f.tecnico.value = t; $('#hintEmp').textContent = ''; }
+};
+async function devolver(codigo, btn) {
+  const r = await enviar({ acao: 'devolver', codigo }, btn);
+  if (r) { toast('Devolvido: ' + r.equipamento + ' (' + r.responsavel + '). Chamado encerrado e e-mail enviado.'); $('#fDev').reset(); $('#hintDev').textContent = ''; }
+}
+$('#fDev').onsubmit = ev => { ev.preventDefault(); devolver(ev.target.codigo.value.trim(), ev.target.querySelector('button')); };
+$('#abertos').onclick = ev => { const c = ev.target.dataset.dev; if (c) devolver(c, ev.target); };
+$('#fEqp').onsubmit = async ev => {
+  ev.preventDefault(); const f = ev.target; const d = Object.fromEntries(new FormData(f)); d.acao = 'registrar';
+  if (await enviar(d, f.querySelector('button'))) { toast('Equipamento ' + d.codigo + ' registrado.'); f.reset(); }
+};
+$('#busca').oninput = historico;
+carregar();
+</script>
+</body>
+</html>
